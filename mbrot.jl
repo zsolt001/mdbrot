@@ -1,11 +1,13 @@
-using Plots
+using GLMakie
+GLMakie.activate!()
+
 
 function mandelbrot(limit)
-    w, h = 800, 800  # width and height of the image
+    w, h = 1800, 1800  # width and height of the image
     img = zeros(h, w)
 
-    xmin = -1.5
-    xmax = 1.5
+    xmin = -2
+    xmax = 1
     ymin = -1
     ymax = 1
 
@@ -30,12 +32,32 @@ function mandelbrot(limit)
             color = i == limit + 1 ? 0 : i
             y = Int(round((zy - ymin) / ystep))
             x = Int(round((zx - xmin) / xstep))
-            img[y, x] = i == limit + 1 ? 0 : i
+            img[x, y] = color
         end
     end
 
     return img
 end
 
+
+fig = Figure()
 image = mandelbrot(100)
-heatmap(image, color=:inferno, axis=false)
+hm = heatmap(fig[1, 1], image, colormap=:inferno)
+sl_limit = Slider(fig[2, 1], range=0:50:1000, startvalue=100)
+
+# Define a function to update the heatmap
+function update_heatmap(slider_value)
+    # Generate a new image based on the slider value
+    new_image = mandelbrot(slider_value)
+    # Update the existing heatmap with the new image
+    hm.plot[3][] = new_image
+end
+
+# Observe the changes in the slider value and trigger the update_heatmap function
+on(sl_limit.value) do value
+    println("slider value: $value")
+    update_heatmap(value)
+end
+
+# Display the figure
+fig
