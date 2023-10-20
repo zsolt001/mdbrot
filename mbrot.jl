@@ -2,9 +2,12 @@ using GLMakie
 GLMakie.activate!()
 
 
-function mandelbrot(limit)
-    w, h = 1800, 1800  # width and height of the image
-    img = zeros(h, w)
+function mandelbrot(limit, width, height)
+    w = width[]
+    h = height[]
+    lim = limit[]
+
+    img = zeros(w, h)
 
     xmin = -2
     xmax = 1
@@ -15,8 +18,8 @@ function mandelbrot(limit)
     ystep = abs(ymax - ymin) / h
 
 
-    for zx = xmin+xstep:xstep:xmax
-        for zy = ymin+ystep:ystep:ymax
+    for zx = xmin+xstep:xstep:xmax-xstep
+        for zy = ymin+ystep:ystep:ymax-ystep
             c = zx + zy * im
             z = c
             i = 1
@@ -29,7 +32,7 @@ function mandelbrot(limit)
             end
 
             # Convert iteration number into color
-            color = i == limit + 1 ? 0 : i
+            color = i == lim + 1 ? 0 : i
             y = Int(round((zy - ymin) / ystep))
             x = Int(round((zx - xmin) / xstep))
             img[x, y] = color
@@ -39,25 +42,22 @@ function mandelbrot(limit)
     return img
 end
 
-
 fig = Figure()
-image = mandelbrot(100)
-hm = heatmap(fig[1, 1], image, colormap=:inferno)
-sl_limit = Slider(fig[2, 1], range=0:50:1000, startvalue=100)
 
-# Define a function to update the heatmap
-function update_heatmap(slider_value)
-    # Generate a new image based on the slider value
-    new_image = mandelbrot(slider_value)
-    # Update the existing heatmap with the new image
-    hm.plot[3][] = new_image
-end
+sl_grid = SliderGrid(fig[2, 1],
+    (label="limit", range=0:50:1000, startvalue=100, snap=false),
+    (label="resolution", range=200:1000, startvalue=200)
+)
 
-# Observe the changes in the slider value and trigger the update_heatmap function
-on(sl_limit.value) do value
-    println("slider value: $value")
-    update_heatmap(value)
-end
+w = Observable(1)
+connect!(w, sl_grid.sliders[2].value)
+h = @lift(Int(round($w .* 0.8)))
+limit = sl_grid.sliders[1].value
+
+# image = mandelbrot(100, w, h)
+image = lift((l, w, h) -> mandelbrot(l, w, h), limit, w, h)
+
+hm = heatmap!(fig[1, 1], image, colormap=:inferno)
 
 # Display the figure
 fig
